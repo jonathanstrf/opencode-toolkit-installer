@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run smoke test
+        run: bash tests/smoke-test.sh
+      - name: Create release package
+        run: |
+          cd scripts
+          zip -r ../opencode-toolkit-installer-${{ github.ref_name }}.zip .
+          cd ..
+          sha256sum opencode-toolkit-installer-${{ github.ref_name }}.zip > opencode-toolkit-installer-${{ github.ref_name }}.zip.sha256
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            opencode-toolkit-installer-${{ github.ref_name }}.zip
+            opencode-toolkit-installer-${{ github.ref_name }}.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

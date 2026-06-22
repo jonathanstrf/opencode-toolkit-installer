@@ -1,0 +1,7 @@
+*.zip
+*.log
+*.backup
+.DS_Store
+node_modules/
+.env
+.spartan-repo
