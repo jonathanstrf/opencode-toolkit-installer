@@ -1,0 +1,52 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/gpt-5.4",
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "qwen2.5-coder:14b": {
+          "name": "Qwen2.5-Coder 14B (local)"
+        }
+      }
+    }
+  },
+  "agent": {
+    "plan": {
+      "model": "github-copilot/claude-sonnet-4.5",
+      "description": "High-quality planning & architecture"
+    },
+    "build": {
+      "model": "github-copilot/gpt-5.4",
+      "description": "High-quality build coordination and code generation"
+    },
+    "review": {
+      "model": "github-copilot/claude-sonnet-4.5",
+      "description": "High-quality code review"
+    },
+    "simple": {
+      "mode": "primary",
+      "model": "github-copilot/gpt-5-mini",
+      "description": "Low-cost mode for simple questions and quick answers"
+    },
+    "general": {
+      "model": "github-copilot/gpt-5-mini",
+      "description": "Cheap cloud model for parallel multi-step tasks"
+    },
+    "explore": {
+      "model": "github-copilot/gpt-5-mini",
+      "description": "Fast codebase exploration with cheap cloud model"
+    },
+    "scout": {
+      "model": "github-copilot/gpt-5-mini",
+      "description": "External docs and dependency research with cheap cloud model"
+    }
+  }
+}

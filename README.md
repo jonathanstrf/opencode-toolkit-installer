@@ -49,13 +49,47 @@ Windows (PowerShell)
    .\setup-opencode-toolkits.ps1 -SpartanRepo "$env:USERPROFILE\Code\ai-toolkit"
    ```
 
+Version Management
+
+`config/toolkit-version.lock` is the central source of truth for this repo.
+
+It pins:
+
+- the installer release version
+- the upstream `ai-toolkit` repo URL
+- the exact `ai-toolkit` version and commit to install
+- expected command and skill counts for verification
+
+Both installers auto-checkout the locked `ai-toolkit` commit before syncing files into `~/.config/opencode`.
+
+Use `scripts/update-toolkits.sh` or `scripts/update-toolkits.ps1` when you want to refresh an existing machine consistently.
+
+Config Templates
+
+`config/opencode.template.json` stores the canonical OpenCode config for this repo.
+
+Use:
+
+- bash: `bash setup-opencode-toolkits.sh --apply-config`
+- PowerShell: `.\setup-opencode-toolkits.ps1 -ApplyConfig`
+
+The template merge adds missing plugins and agents while preserving existing model and provider settings.
+
 Flags (both scripts)
 
 --spartan-repo / -SpartanRepo PATH   Path to ai-toolkit repo (default: ~/Code/ai-toolkit)
 --skip-spartan / -SkipSpartan        Install Superpowers only
 --skip-superpowers / -SkipSuperpowers  Install Spartan only
 --no-enhance / -NoEnhance            Skip CLAUDE.md enhancement
+--apply-config / -ApplyConfig        Merge config/opencode.template.json into opencode.json
+--verify / -Verify                   Run verification after install
 --dry-run / -DryRun                  Preview actions without writing files
+
+Update scripts
+
+- `--latest` / `-Latest` update the local `ai-toolkit` checkout, rewrite the lock file, reinstall, then verify.
+- `--locked` / `-Locked` reinstall using the currently locked version.
+- `--verify-only` / `-VerifyOnly` run health checks without reinstalling.
 
 Verification
 
@@ -67,8 +101,38 @@ After install, verify the key artifacts:
 - Skills count (expected ~38):
   - macOS/Linux: `find ~/.config/opencode/skills -mindepth 1 -maxdepth 2 -type d | wc -l`
   - Windows PowerShell: `(Get-ChildItem -Path "$env:USERPROFILE\.config\opencode\skills" -Directory -Depth 2).Count`
+- Version pin: `~/.config/opencode/.spartan-version` should match `config/toolkit-version.lock` -> `ai-toolkit.version`
 - CLAUDE.md enhancement: `~/.config/opencode/CLAUDE.md` should contain the "DECISION CHECKPOINT" callout and a "Question Tool Usage" section.
 - Superpowers plugin: `~/.config/opencode/opencode.json` should include `"superpowers@git+https://github.com/obra/superpowers.git"` in the plugin array.
+
+Automated verification is also available:
+
+- bash: `bash scripts/verify-installation.sh`
+- PowerShell: `.\scripts\verify-installation.ps1`
+
+The verification scripts check 8 items: directory structure, commands count, skills count, CLAUDE.md decision checkpoint, CLAUDE.md question tool section, Superpowers plugin, locked Spartan version, and local `ai-toolkit` git state.
+
+jq requirement
+
+The bash installer requires `jq` and will try to auto-install it when missing. The PowerShell installer uses native JSON support and has no extra JSON dependency.
+
+Update Workflow
+
+Use the update scripts when you want repeatable multi-machine maintenance:
+
+```bash
+bash scripts/update-toolkits.sh --locked
+bash scripts/update-toolkits.sh --latest
+bash scripts/update-toolkits.sh --verify-only
+```
+
+```powershell
+.\scripts\update-toolkits.ps1 -Locked
+.\scripts\update-toolkits.ps1 -Latest
+.\scripts\update-toolkits.ps1 -VerifyOnly
+```
+
+See `docs/SETUP.md` for more detailed machine setup and maintenance workflows.
 
 Restart OpenCode to load plugins and test:
 
@@ -77,15 +141,15 @@ Restart OpenCode to load plugins and test:
 
 Troubleshooting
 
-See TROUBLESHOOTING.md for common issues, including running .sh files on Windows and enhancer failures.
+See `TROUBLESHOOTING.md` for common issues, including running `.sh` files on Windows, jq installation failures, version lock mismatches, and enhancer failures.
 
 Install From Release (recommended)
 
-If you prefer a single downloadable package instead of cloning the repo, use the GitHub Release artifacts. Replace <TAG> with a specific tag (e.g., v1.1.0) or use "latest".
+If you prefer a single downloadable package instead of cloning the repo, use the GitHub Release artifacts. Replace `<TAG>` with a specific tag (for example `v2.0.0`) or use `latest`.
 
 ```bash
 # Example (replace TAG if needed)
-TAG=${TAG:-v1.1.0}
+TAG=${TAG:-v2.0.0}
 BASE="https://github.com/jonathanstrf/opencode-toolkit-installer/releases/download/$TAG"
 ZIP="opencode-toolkit-installer-$TAG.zip"
 SHA="$ZIP.sha256"
@@ -107,5 +171,5 @@ echo "  cd $HOME/Downloads/opencode-toolkit-installer-$TAG/scripts && bash setup
 Or use the included helper (if you have cloned the repo):
 
 ```bash
-./scripts/install-from-release.sh v1.1.0
+./scripts/install-from-release.sh v2.0.0
 ```

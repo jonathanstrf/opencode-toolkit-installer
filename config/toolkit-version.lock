@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-06-22",
+  "ai-toolkit": {
+    "repo": "https://github.com/c0x12c/ai-toolkit.git",
+    "version": "1.27.0",
+    "commit": "96b2c9d099f8507a95b9e43916f144594720a3c9",
+    "branch": "master",
+    "verified_date": "2026-06-22"
+  },
+  "superpowers": {
+    "repo": "git+https://github.com/obra/superpowers.git",
+    "verified_date": "2026-06-22",
+    "note": "Installed as OpenCode plugin, version managed by OpenCode"
+  },
+  "checksums": {
+    "expected_command_count": 71,
+    "expected_skill_count": 35
+  },
+  "dependencies": {
+    "bash": {
+      "required": ["git", "jq", "rsync"],
+      "optional": []
+    },
+    "powershell": {
+      "required": ["git"],
+      "optional": ["robocopy"]
+    }
+  }
+}
