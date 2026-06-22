@@ -27,6 +27,18 @@ jobs:
       - name: Run smoke test
         run: bash tests/smoke-test.sh
 
+      - name: Configure git for tag push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Use the GITHUB_TOKEN for authenticated pushes
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Create and push tag
+        run: |
+          git tag -a $TAG -m "Automated release $TAG"
+          git push origin $TAG
+
       - name: Create release package
         run: |
           mkdir -p release
@@ -38,6 +50,7 @@ jobs:
       - name: Create Release (softprops)
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ env.TAG }}
           files: |
             release/opencode-toolkit-installer-${{ env.TAG }}.zip
             release/opencode-toolkit-installer-${{ env.TAG }}.zip.sha256
