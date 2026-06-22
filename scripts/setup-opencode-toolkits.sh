@@ -109,24 +109,58 @@ merge_json_file(){
     return 0
   fi
 
-  jq -s '
-    def deepmerge(a; b):
-      if (a | type) == "object" and (b | type) == "object" then
-        reduce ((a | keys_unsorted[]) + (b | keys_unsorted[]) | unique[]) as $key
-          ({};
-            .[$key] = if (a[$key] == null) then b[$key]
-              elif (b[$key] == null) then a[$key]
-              elif ($key == "agent") then b[$key]
-              else deepmerge(a[$key]; b[$key])
-              end
-          )
-      elif (a | type) == "array" and (b | type) == "array" then
-        (a + b | unique)
-      else
-        a
-      end;
-    deepmerge(.[0]; .[1])
-  ' "$target_file" "$source_file" > "$tmp_file"
+  # Use Python for robust deep-merge to avoid jq type-iteration edge cases.
+  # Export file paths so the embedded Python can read them reliably.
+  export TARGET_FILE="$target_file"
+  export SOURCE_FILE="$source_file"
+  python3 - <<'PY' > "$tmp_file"
+import json,sys
+from pathlib import Path
+
+def deepmerge(a, b):
+    if isinstance(a, dict) and isinstance(b, dict):
+        out = {}
+        for k in set(list(a.keys()) + list(b.keys())):
+            if k not in a:
+                out[k] = b[k]
+            elif k not in b:
+                out[k] = a[k]
+            elif k == 'agent':
+                out[k] = b[k]
+            else:
+                out[k] = deepmerge(a[k], b[k])
+        return out
+    if isinstance(a, list) and isinstance(b, list):
+        # preserve order but uniq
+        seen = set()
+        out = []
+        for v in a + b:
+            key = json.dumps(v, sort_keys=True) if isinstance(v, (dict, list)) else v
+            if key not in seen:
+                seen.add(key)
+                out.append(v)
+        return out
+    # Prefer the existing value (a) for primitives to avoid accidental type coercion
+    return a
+
+src = Path(sys.argv[1]).read_text() if len(sys.argv) > 1 else None
+# read files passed via heredoc context: we expect target then source
+# but the shell redirects nothing into argv, so instead open files from environment
+import os
+target_file = os.environ.get('TARGET_FILE')
+source_file = os.environ.get('SOURCE_FILE')
+if not target_file or not source_file:
+    # fallback to using the files from the parent shell by reading known paths
+    # This branch won't run when called from the wrapper which sets env vars.
+    pass
+with open(target_file, 'r') as f:
+    a = json.load(f)
+with open(source_file, 'r') as f:
+    b = json.load(f)
+out = deepmerge(a, b)
+json.dump(out, sys.stdout, indent=2, ensure_ascii=False)
+PY
+  # Note: merge_json_file will set SOURCE_FILE and TARGET_FILE in the environment
 
   mv "$tmp_file" "$target_file"
   log "Merged template config into $target_file"

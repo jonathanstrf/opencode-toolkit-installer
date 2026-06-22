@@ -19,12 +19,20 @@
   },
   "dependencies": {
     "bash": {
-      "required": ["git", "jq", "rsync"],
+      "required": [
+        "git",
+        "jq",
+        "rsync"
+      ],
       "optional": []
     },
     "powershell": {
-      "required": ["git"],
-      "optional": ["robocopy"]
+      "required": [
+        "git"
+      ],
+      "optional": [
+        "robocopy"
+      ]
     }
   }
 }
