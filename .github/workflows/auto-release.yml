@@ -2,8 +2,8 @@ name: Auto Release on master
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -15,37 +15,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set tag name
-        id: tag
-        run: |
-          TAG="v$(date -u +%Y%m%d%H%M%S)"
-          echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "tag=$TAG"
-          echo "Created tag: $TAG"
+      - name: Set TAG env from ref
+        run: echo "TAG=${GITHUB_REF_NAME:-${GITHUB_REF#refs/tags/}}" >> $GITHUB_ENV
 
       - name: Run smoke test
         run: bash tests/smoke-test.sh
-
-      - name: Configure git for tag push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Use the GITHUB_TOKEN for authenticated pushes
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-
-      - name: Create and push tag
-        run: |
-          git tag -a $TAG -m "Automated release $TAG"
-          git push origin $TAG
 
       - name: Create release package
         run: |
           mkdir -p release
           cd scripts
-          zip -r ../release/opencode-toolkit-installer-${TAG}.zip .
+          zip -r ../release/opencode-toolkit-installer-${{ env.TAG }}.zip .
           cd ..
-          sha256sum release/opencode-toolkit-installer-${TAG}.zip > release/opencode-toolkit-installer-${TAG}.zip.sha256
+          sha256sum release/opencode-toolkit-installer-${{ env.TAG }}.zip > release/opencode-toolkit-installer-${{ env.TAG }}.zip.sha256
 
       - name: Create Release (softprops)
         uses: softprops/action-gh-release@v1
