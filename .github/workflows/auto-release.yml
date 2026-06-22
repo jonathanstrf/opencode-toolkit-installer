@@ -1,0 +1,45 @@
+name: Auto Release on master
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set tag name
+        id: tag
+        run: |
+          TAG="v$(date -u +%Y%m%d%H%M%S)"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "tag=$TAG"
+          echo "Created tag: $TAG"
+
+      - name: Run smoke test
+        run: bash tests/smoke-test.sh
+
+      - name: Create release package
+        run: |
+          mkdir -p release
+          cd scripts
+          zip -r ../release/opencode-toolkit-installer-${TAG}.zip .
+          cd ..
+          sha256sum release/opencode-toolkit-installer-${TAG}.zip > release/opencode-toolkit-installer-${TAG}.zip.sha256
+
+      - name: Create Release (softprops)
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/opencode-toolkit-installer-${{ env.TAG }}.zip
+            release/opencode-toolkit-installer-${{ env.TAG }}.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
