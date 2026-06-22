@@ -1,3 +1,5 @@
+![release](https://img.shields.io/github/v/release/jonathanstrf/opencode-toolkit-installer?label=release)
+
 # OpenCode Toolkit Installer
 
 Unified installer for Spartan AI Toolkit + Superpowers on OpenCode.
@@ -76,3 +78,34 @@ Restart OpenCode to load plugins and test:
 Troubleshooting
 
 See TROUBLESHOOTING.md for common issues, including running .sh files on Windows and enhancer failures.
+
+Install From Release (recommended)
+
+If you prefer a single downloadable package instead of cloning the repo, use the GitHub Release artifacts. Replace <TAG> with a specific tag (e.g., v1.1.0) or use "latest".
+
+```bash
+# Example (replace TAG if needed)
+TAG=${TAG:-v1.1.0}
+BASE="https://github.com/jonathanstrf/opencode-toolkit-installer/releases/download/$TAG"
+ZIP="opencode-toolkit-installer-$TAG.zip"
+SHA="$ZIP.sha256"
+DEST="$HOME/Downloads/$ZIP"
+
+mkdir -p "$HOME/Downloads"
+curl -sSL -o "$DEST" "$BASE/$ZIP"
+curl -sSL -o "$HOME/Downloads/$SHA" "$BASE/$SHA"
+cd "$HOME/Downloads"
+# verify checksum (the .sha256 file is expected to contain: <sha256>  <filename>)
+shasum -a 256 -c "$SHA"
+if [[ $? -ne 0 ]]; then echo "Checksum verification failed"; exit 1; fi
+unzip -q -o "$ZIP" -d "$HOME/Downloads/opencode-toolkit-installer-$TAG"
+echo "Extracted to: $HOME/Downloads/opencode-toolkit-installer-$TAG"
+echo "Run the installer (dry-run first):"
+echo "  cd $HOME/Downloads/opencode-toolkit-installer-$TAG/scripts && bash setup-opencode-toolkits.sh --dry-run"
+```
+
+Or use the included helper (if you have cloned the repo):
+
+```bash
+./scripts/install-from-release.sh v1.1.0
+```
