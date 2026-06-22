@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Portable CLAUDE.md enhancer (copied from existing script)
+# Portable CLAUDE.md enhancer (safer: work on a copy and update only when needed)
 set -euo pipefail
 
 CLAUDE="$HOME/.config/opencode/CLAUDE.md"
@@ -8,14 +8,19 @@ if [[ ! -f "$CLAUDE" ]]; then
   exit 1
 fi
 
+# Create a safe backup of the current file before making any changes
 BACKUP="$HOME/.config/opencode/CLAUDE.md.backup-enhance-$(date +%Y%m%d-%H%M%S)"
 cp -a "$CLAUDE" "$BACKUP"
 echo "Backup created: $BACKUP"
 
-TMP1=$(mktemp)
-TMP2=$(mktemp)
+# Work on a copy and only replace the original if changes are necessary
+WORK=$(mktemp)
+cp -p "$CLAUDE" "$WORK"
 
-cat > "$TMP1" <<'EOF'
+CALLFILE=$(mktemp)
+QFILE=$(mktemp)
+
+cat > "$CALLFILE" <<'EOF'
 ---
 
 > **⚠️ DECISION CHECKPOINT — Use Question Tool Proactively**  
@@ -28,7 +33,7 @@ cat > "$TMP1" <<'EOF'
 
 EOF
 
-cat > "$TMP2" <<'EOF'
+cat > "$QFILE" <<'EOF'
 ### Question Tool Usage (Agent Behavior)
 
 **ALWAYS use the `question` tool when:**
@@ -50,14 +55,33 @@ cat > "$TMP2" <<'EOF'
 
 EOF
 
-# Step 1: Insert callout before the '### 2. Spec Before Code' line if present
-awk -v callfile="$TMP1" 'BEGIN{ inserted=0 } /### 2\. Spec Before Code/ && inserted==0 { system("cat \""callfile"\"" ); inserted=1 } { print }' "$BACKUP" > "$CLAUDE.tmp"
+# Ensure temporary files are removed on exit
+cleanup(){ rm -f "$WORK" "$CALLFILE" "$QFILE"; }
+trap cleanup EXIT
 
-# Step 2: Replace existing Question Tool section if present; otherwise append the new section near the top
-awk -v newfile="$TMP2" 'BEGIN{ inblock=0; found=0 } /### Question Tool Usage \(Agent Behavior\)/{ inblock=1; found=1; system("cat \""newfile"\"" ); next } inblock==1 && /^---$/{ inblock=0; next } inblock==0{ print } END{ if(found==0){ print "\n"; system("cat \""newfile"\"" ) } }' "$CLAUDE.tmp" > "$CLAUDE"
+# 1) Insert decision callout if not already present
+if ! grep -q "DECISION CHECKPOINT" "$WORK"; then
+  awk -v callfile="$CALLFILE" 'BEGIN{ inserted=0 } /### 2\. Spec Before Code/ && inserted==0 { system("cat \""callfile"\"" ); inserted=1 } { print }' "$WORK" > "$WORK.tmp" && mv "$WORK.tmp" "$WORK"
+  echo "Inserted decision callout"
+else
+  echo "Decision callout already present; skipping insertion"
+fi
 
-rm -f "$CLAUDE.tmp" "$TMP1" "$TMP2"
+# 2) Replace existing Question Tool section if present; otherwise append it
+if grep -q "### Question Tool Usage (Agent Behavior)" "$WORK"; then
+  awk -v newfile="$QFILE" 'BEGIN{ inblock=0; found=0 } /### Question Tool Usage \(Agent Behavior\)/{ inblock=1; found=1; system("cat \""newfile"\"" ); next } inblock==1 && /^---$/{ inblock=0; next } inblock==0{ print } END{ if(found==0){ print "\n"; system("cat \""newfile"\"" ) } }' "$WORK" > "$WORK.tmp" && mv "$WORK.tmp" "$WORK"
+  echo "Replaced existing Question Tool section"
+else
+  cat "$QFILE" >> "$WORK"
+  echo "Appended Question Tool section"
+fi
 
-echo "Enhanced $CLAUDE (backup at $BACKUP)"
+# 3) If changes were made, replace the original atomically; otherwise leave it untouched
+if ! cmp -s "$BACKUP" "$WORK"; then
+  mv "$WORK" "$CLAUDE"
+  echo "Enhanced $CLAUDE (backup at $BACKUP)"
+else
+  echo "No changes required; original CLAUDE.md left untouched (backup at $BACKUP)"
+fi
 
 exit 0
