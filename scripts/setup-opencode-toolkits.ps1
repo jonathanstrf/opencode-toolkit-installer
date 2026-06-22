@@ -51,11 +51,18 @@ if (-not $SkipSpartan) {
   if (-not $DryRun) { Set-Content -Path "$Target\.spartan-repo" -Value $SpartanRepo }
 
   if (-not $NoEnhance) {
-    $scriptPath = Join-Path (Split-Path $MyInvocation.MyCommand.Path) "enhance-claude-portable.sh"
-    if (Test-Path $scriptPath) {
-      if ($DryRun) { Write-Host "Would run enhancer $scriptPath" }
-      else { bash $scriptPath }
-    } else { Write-Host "Enhancer not found; skipping" }
+    $ScriptDir   = Split-Path $MyInvocation.MyCommand.Path
+    $psEnhancer  = Join-Path $ScriptDir "enhance-claude-portable.ps1"
+    $shEnhancer  = Join-Path $ScriptDir "enhance-claude-portable.sh"
+
+    if ($DryRun) { Write-Host "Would run enhancer" }
+    elseif (Test-Path $psEnhancer) {
+      & $psEnhancer
+    } elseif (Get-Command bash -ErrorAction SilentlyContinue) {
+      bash $shEnhancer
+    } else {
+      Write-Host "No enhancer available; skipping CLAUDE.md enhancement (run enhance-claude-portable.ps1 manually)"
+    }
   }
 }
 
