@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
 
+# Grant the workflow explicit permissions so it can create releases and upload assets.
+# Some org or repo settings require explicit permission declarations.
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,3 +32,7 @@ jobs:
             opencode-toolkit-installer-${{ github.ref_name }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # softprops/action-gh-release v1 requires a valid GITHUB_TOKEN with
+        # write permissions to create releases. If you see 403 errors, verify
+        # that the repository's Actions settings allow the workflow to create
+        # and modify releases and that the token has not been restricted.
